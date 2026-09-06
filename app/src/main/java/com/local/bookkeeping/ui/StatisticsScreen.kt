@@ -29,10 +29,11 @@ import java.time.YearMonth
 fun StatisticsScreen(state: LedgerState) {
  var month by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
  val entries = state.transactions.filter { it.transactionDate.startsWith(month) }
- val income = entries.filter { it.type == "Income" }.sumOf { it.amountUsd }
- val expense = entries.filter { it.type == "Expense" }.sumOf { it.amountUsd }
+ val cashflowEntries = entries.filterNot { it.category == "Transfer" }
+ val income = cashflowEntries.filter { it.type == "Income" }.sumOf { it.amountUsd }
+ val expense = cashflowEntries.filter { it.type == "Expense" }.sumOf { it.amountUsd }
  val balance = income - expense
- val categories = entries.filter { it.type == "Expense" }
+ val categories = cashflowEntries.filter { it.type == "Expense" }
   .groupBy { it.category }
   .mapValues { (_, list) -> list.sumOf { it.amountUsd } }
   .toList()
