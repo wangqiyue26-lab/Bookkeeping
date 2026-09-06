@@ -1,0 +1,63 @@
+name: Android Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Android Build']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: dollar-ledger-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - run: ./gradlew --version
+      - run: ./gradlew test assembleDebug
+      - name: Prepare release
+        id: package
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          TAG="v$VERSION"
+          if [ "$REF_TYPE" = "tag" ]; then
+            test "$REF_NAME" = "$TAG"
+          fi
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/DollarLedger-$TAG.apk"
+          (cd dist && sha256sum "DollarLedger-$TAG.apk" > SHA256SUMS.txt)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Publish personal build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.package.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; preserving immutable assets."
+          else
+            gh release create "$TAG" "dist/DollarLedger-$TAG.apk" dist/SHA256SUMS.txt --target "$(git rev-parse HEAD)" --title "Dollar Ledger $TAG" --notes "Personal debug build. Android 8.0+ (API 26). Download the APK directly on your Android phone. Export a JSON backup before replacing an existing installation; debug signing keys can differ across builds. All account data remains local. See README for features, privacy and limitations."
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DollarLedger-Release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
