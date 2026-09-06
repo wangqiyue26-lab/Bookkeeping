@@ -1,46 +1,49 @@
 package com.local.bookkeeping.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.local.bookkeeping.domain.Money
 
 @Composable
-fun WalletScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Unit) {
+fun WalletScreen(state: LedgerState) {
  LazyColumn(
-  contentPadding = PaddingValues(bottom = 28.dp),
-  verticalArrangement = Arrangement.spacedBy(18.dp)
+  contentPadding = PaddingValues(bottom = 32.dp),
+  verticalArrangement = Arrangement.spacedBy(20.dp)
  ) {
   item {
    Column(
-    Modifier.fillMaxWidth().background(Navy).padding(horizontal = 22.dp, vertical = 28.dp),
+    modifier = Modifier
+     .fillMaxWidth()
+     .background(Navy)
+     .padding(horizontal = 20.dp, vertical = 54.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(10.dp)
    ) {
-    Text("Wallet", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
-    Spacer(Modifier.height(6.dp))
-    Text("TOTAL BALANCE", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.72f))
-    Text(state.netUsdDisplay(), style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold, color = Color.White)
+    Text(
+     text = state.netUsdDisplay(),
+     color = Color.White,
+     fontSize = 64.sp,
+     lineHeight = 68.sp,
+     fontWeight = FontWeight.Bold
+    )
     if (state.settings.showCnySecondaryAmount) {
-     Text("≈ ${state.netCnyDisplay()}", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.76f))
-    }
-    if (state.totalCreditCardDebtUsdCents > 0L) {
-     Surface(shape = RoundedCornerShape(14.dp), color = Color.White.copy(alpha = 0.12f)) {
-      Text(
-       "Credit-card debt  −${Money.display(state.totalCreditCardDebtUsdCents)}",
-       modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-       style = MaterialTheme.typography.labelMedium,
-       color = Color.White
-      )
-     }
+     Text(
+      text = "≈ ${state.netCnyDisplay()}",
+      style = MaterialTheme.typography.titleMedium,
+      color = Color.White.copy(alpha = 0.76f)
+     )
     }
    }
   }
@@ -57,70 +60,17 @@ fun WalletScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> 
 
   item {
    Card(
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-    shape = RoundedCornerShape(20.dp),
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+    shape = RoundedCornerShape(28.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
    ) {
-    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-      Column {
-       Text("Exchange rate", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-       Text(
-        state.rate?.let { "1 CNY = $$it" } ?: "Unavailable",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-       )
-       Text(state.rateDate.ifBlank { "No saved rate" }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-      TextButton(onClick = vm::refreshRate, enabled = !state.settings.manualRateEnabled) { Text("Refresh") }
-     }
-     if (state.rate == null) {
-      OutlinedButton(onClick = { navigate("settings") }, modifier = Modifier.fillMaxWidth()) { Text("Set exchange rate") }
-     }
-    }
-   }
-  }
-
-  item {
-   Row(
-    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically
-   ) {
-    Text("Accounts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    TextButton(onClick = { navigate("accountEdit/0") }) { Text("+ Add") }
-   }
-  }
-
-  state.activeAccounts.forEach { account ->
-   item(key = "wallet-${account.id}") {
-    val credit = account.accountType == "Credit Card"
-    Card(
-     onClick = { navigate("account/${account.id}") },
-     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-     shape = RoundedCornerShape(18.dp),
-     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-      Surface(modifier = Modifier.size(44.dp), shape = CircleShape, color = if (credit) Color(0xFFF5E8EA) else SoftBlue) {
-       Box(contentAlignment = Alignment.Center) {
-        Text(if (credit) "V" else account.name.take(1), fontWeight = FontWeight.Bold, color = Navy)
-       }
-      }
-      Spacer(Modifier.width(14.dp))
-      Column(Modifier.weight(1f)) {
-       Text(account.name, fontWeight = FontWeight.SemiBold)
-       Text(if (credit) "Credit Card · USD debt" else account.accountType, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
-      Text(
-       if (credit) "−${Money.display(account.creditCardDebtUsdCents)}" else state.usd(state.balance(account.id)),
-       fontWeight = FontWeight.Bold,
-       color = if (credit) ExpenseRed else MaterialTheme.colorScheme.onSurface
-      )
-     }
-    }
+    DottedWorldMap(
+     modifier = Modifier
+      .fillMaxWidth()
+      .height(250.dp)
+      .padding(horizontal = 18.dp, vertical = 20.dp)
+    )
    }
   }
  }
@@ -128,10 +78,54 @@ fun WalletScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> 
 
 @Composable
 private fun WalletMetric(label: String, value: String, modifier: Modifier) {
- Card(modifier = modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+ Card(
+  modifier = modifier,
+  shape = RoundedCornerShape(18.dp),
+  colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+ ) {
   Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
    Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
    Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+  }
+ }
+}
+
+@Composable
+private fun DottedWorldMap(modifier: Modifier = Modifier) {
+ Canvas(modifier) {
+  fun ellipse(x: Float, y: Float, cx: Float, cy: Float, rx: Float, ry: Float): Boolean {
+   val dx = (x - cx) / rx
+   val dy = (y - cy) / ry
+   return dx * dx + dy * dy <= 1f
+  }
+
+  val stepX = 0.025f
+  val stepY = 0.055f
+  var y = 0.08f
+  while (y <= 0.90f) {
+   var x = 0.05f
+   while (x <= 0.95f) {
+    val northAmerica = ellipse(x, y, 0.25f, 0.30f, 0.16f, 0.16f) || ellipse(x, y, 0.16f, 0.20f, 0.08f, 0.07f)
+    val centralAmerica = ellipse(x, y, 0.31f, 0.43f, 0.05f, 0.08f)
+    val southAmerica = ellipse(x, y, 0.38f, 0.62f, 0.08f, 0.21f)
+    val greenland = ellipse(x, y, 0.40f, 0.13f, 0.055f, 0.065f)
+    val europe = ellipse(x, y, 0.53f, 0.29f, 0.075f, 0.075f)
+    val africa = ellipse(x, y, 0.55f, 0.51f, 0.10f, 0.18f)
+    val asia = ellipse(x, y, 0.69f, 0.31f, 0.20f, 0.13f) || ellipse(x, y, 0.76f, 0.43f, 0.12f, 0.09f)
+    val japan = ellipse(x, y, 0.88f, 0.38f, 0.025f, 0.07f)
+    val australia = ellipse(x, y, 0.82f, 0.68f, 0.10f, 0.075f)
+    val madagascar = ellipse(x, y, 0.66f, 0.67f, 0.025f, 0.07f)
+    val land = northAmerica || centralAmerica || southAmerica || greenland || europe || africa || asia || japan || australia || madagascar
+    if (land) {
+     drawCircle(
+      color = Navy.copy(alpha = 0.82f),
+      radius = 2.1.dp.toPx(),
+      center = Offset(x * size.width, y * size.height)
+     )
+    }
+    x += stepX
+   }
+   y += stepY
   }
  }
 }
