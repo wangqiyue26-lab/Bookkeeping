@@ -23,11 +23,14 @@ class LedgerDaoTest {
  @Test fun defaultsAreIdempotentAndZero() = runTest {
   val repo = LedgerRepository(db)
   repo.initialize(); repo.initialize()
+  val accounts = db.dao().accountSnapshot()
   assertEquals(
    listOf("中国银行", "中国工商银行", "北京银行", "中国银行全币种 Visa 白金卡"),
-   db.dao().accountSnapshot().map { it.name }
+   accounts.map { it.name }
   )
-  assertTrue(db.dao().accountSnapshot().all { it.openingBalanceCny == 0L })
+  assertTrue(accounts.all { it.openingBalanceCny == 0L })
+  assertTrue(accounts.all { it.creditCardDebtUsdCents == 0L })
+  assertEquals("Credit Card", accounts.last().accountType)
  }
  @Test fun legacyUntouchedDefaultsAreUpgraded() = runTest {
   val dao = db.dao()
@@ -35,10 +38,25 @@ class LedgerDaoTest {
   dao.insertAccount(Account(name = "Savings", accountType = "Savings", sortOrder = 1))
   dao.insertAccount(Account(name = "Cash", accountType = "Cash", sortOrder = 2))
   LedgerRepository(db).initialize()
+  val accounts = dao.accountSnapshot()
   assertEquals(
    listOf("中国银行", "中国工商银行", "北京银行", "中国银行全币种 Visa 白金卡"),
-   dao.accountSnapshot().map { it.name }
+   accounts.map { it.name }
   )
+  assertEquals("Credit Card", accounts.last().accountType)
+ }
+ @Test fun existingVisaAccountIsPromotedToCreditCard() = runTest {
+  val dao = db.dao()
+  dao.insertAccount(Account(name = "中国银行全币种 Visa 白金卡", accountType = "Other"))
+  LedgerRepository(db).initialize()
+  assertEquals("Credit Card", dao.accountSnapshot().single().accountType)
+ }
+ @Test fun creditCardDebtProtectsAccountFromDeletion() = runTest {
+  val repo = LedgerRepository(db)
+  repo.initialize()
+  val card = db.dao().accountSnapshot().last()
+  repo.saveAccount(card.copy(creditCardDebtUsdCents = 12500L))
+  assertEquals(0, db.dao().deleteEmptyAccount(card.id))
  }
  @Test fun insertEditDeleteAndProtectAccount() = runTest {
   val repo = LedgerRepository(db)
