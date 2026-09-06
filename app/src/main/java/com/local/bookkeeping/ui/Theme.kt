@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -25,8 +26,8 @@ fun LedgerTheme(mode: String, content: @Composable () -> Unit) {
  val view = LocalView.current
  SideEffect {
   (view.context as? Activity)?.window?.let { window ->
-   window.statusBarColor = if (dark) Color(0xFF0D1624).value.toInt() else AppBackground.value.toInt()
-   window.navigationBarColor = if (dark) Color(0xFF111D2C).value.toInt() else Color.White.value.toInt()
+   window.statusBarColor = (if (dark) Color(0xFF0D1624) else AppBackground).toArgb()
+   window.navigationBarColor = (if (dark) Color(0xFF111D2C) else Color.White).toArgb()
    WindowCompat.getInsetsController(window, view).apply {
     isAppearanceLightStatusBars = !dark
     isAppearanceLightNavigationBars = !dark
