@@ -24,8 +24,16 @@ data class LedgerState(
  val rate: String? get() = if (settings.manualRateEnabled) settings.manualRate.takeIf { it.isNotBlank() } else cache?.rate
  val rateDate: String get() = if (settings.manualRateEnabled) settings.manualRateDate else cache?.rateDate ?: ""
  val activeAccounts get() = accounts.filterNot { it.isArchived }
+ val assetAccounts get() = activeAccounts.filterNot { it.accountType == "Credit Card" }
+ val creditCardAccounts get() = activeAccounts.filter { it.accountType == "Credit Card" }
  fun balance(id: Long): Long = Money.balance(accounts.find { it.id == id }?.openingBalanceCny ?: 0, transactions.filter { it.accountId == id }.map { it.type to it.amountCny })
- val totalCny get() = activeAccounts.fold(0L) { sum, a -> Math.addExact(sum, balance(a.id)) }
+ val totalAssetCny get() = assetAccounts.fold(0L) { sum, a -> Math.addExact(sum, balance(a.id)) }
+ val totalCreditCardDebtUsdCents get() = creditCardAccounts.fold(0L) { sum, a -> Math.addExact(sum, a.creditCardDebtUsdCents) }
+ val totalCny get() = totalAssetCny
+ val netTotalUsdCents: Long? get() = rate?.let { Money.netUsdCents(totalAssetCny, it, totalCreditCardDebtUsdCents) }
+ val netTotalCnyCents: Long? get() = rate?.let { Money.netCnyCents(totalAssetCny, it, totalCreditCardDebtUsdCents) }
+ fun netUsdDisplay() = netTotalUsdCents?.let { Money.display(it) } ?: "—"
+ fun netCnyDisplay() = netTotalCnyCents?.let { Money.display(it, false) } ?: "—"
  fun usd(cny: Long) = rate?.let { Money.display(Money.usdCents(cny, it)) } ?: "—"
 }
 
