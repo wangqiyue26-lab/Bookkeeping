@@ -1,5 +1,6 @@
 package com.local.bookkeeping.ui
 
+import android.util.Base64
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.local.bookkeeping.domain.Money
+import kotlin.math.min
 
 @Composable
 fun WalletScreen(state: LedgerState) {
@@ -61,15 +63,15 @@ fun WalletScreen(state: LedgerState) {
   item {
    Card(
     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
-    shape = RoundedCornerShape(28.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    shape = RoundedCornerShape(24.dp),
+    colors = CardDefaults.cardColors(containerColor = Color.White),
     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
    ) {
-    DottedWorldMap(
+    ReferenceWorldMap(
      modifier = Modifier
       .fillMaxWidth()
-      .height(250.dp)
-      .padding(horizontal = 18.dp, vertical = 20.dp)
+      .aspectRatio(MAP_WIDTH / MAP_HEIGHT)
+      .padding(8.dp)
     )
    }
   }
@@ -90,42 +92,38 @@ private fun WalletMetric(label: String, value: String, modifier: Modifier) {
  }
 }
 
-@Composable
-private fun DottedWorldMap(modifier: Modifier = Modifier) {
- Canvas(modifier) {
-  fun ellipse(x: Float, y: Float, cx: Float, cy: Float, rx: Float, ry: Float): Boolean {
-   val dx = (x - cx) / rx
-   val dy = (y - cy) / ry
-   return dx * dx + dy * dy <= 1f
-  }
+private const val MAP_WIDTH = 1536f
+private const val MAP_HEIGHT = 833f
 
-  val stepX = 0.025f
-  val stepY = 0.055f
-  var y = 0.08f
-  while (y <= 0.90f) {
-   var x = 0.05f
-   while (x <= 0.95f) {
-    val northAmerica = ellipse(x, y, 0.25f, 0.30f, 0.16f, 0.16f) || ellipse(x, y, 0.16f, 0.20f, 0.08f, 0.07f)
-    val centralAmerica = ellipse(x, y, 0.31f, 0.43f, 0.05f, 0.08f)
-    val southAmerica = ellipse(x, y, 0.38f, 0.62f, 0.08f, 0.21f)
-    val greenland = ellipse(x, y, 0.40f, 0.13f, 0.055f, 0.065f)
-    val europe = ellipse(x, y, 0.53f, 0.29f, 0.075f, 0.075f)
-    val africa = ellipse(x, y, 0.55f, 0.51f, 0.10f, 0.18f)
-    val asia = ellipse(x, y, 0.69f, 0.31f, 0.20f, 0.13f) || ellipse(x, y, 0.76f, 0.43f, 0.12f, 0.09f)
-    val japan = ellipse(x, y, 0.88f, 0.38f, 0.025f, 0.07f)
-    val australia = ellipse(x, y, 0.82f, 0.68f, 0.10f, 0.075f)
-    val madagascar = ellipse(x, y, 0.66f, 0.67f, 0.025f, 0.07f)
-    val land = northAmerica || centralAmerica || southAmerica || greenland || europe || africa || asia || japan || australia || madagascar
-    if (land) {
-     drawCircle(
-      color = Color.Black,
-      radius = 2.1.dp.toPx(),
-      center = Offset(x * size.width, y * size.height)
-     )
-    }
-    x += stepX
-   }
-   y += stepY
+@Composable
+private fun ReferenceWorldMap(modifier: Modifier = Modifier) {
+ Canvas(modifier) {
+  val scale = min(size.width / MAP_WIDTH, size.height / MAP_HEIGHT)
+  val offsetX = (size.width - MAP_WIDTH * scale) / 2f
+  val offsetY = (size.height - MAP_HEIGHT * scale) / 2f
+  val radius = 3.0f * scale
+  var index = 0
+  while (index < worldMapDots.size) {
+   drawCircle(
+    color = Color.Black,
+    radius = radius,
+    center = Offset(
+     offsetX + worldMapDots[index] * scale,
+     offsetY + worldMapDots[index + 1] * scale
+    )
+   )
+   index += 2
   }
  }
 }
+
+private val worldMapDots: IntArray by lazy {
+ val bytes = Base64.decode(WORLD_MAP_DOTS, Base64.NO_WRAP)
+ IntArray(bytes.size / 2) { index ->
+  val offset = index * 2
+  ((bytes[offset].toInt() and 0xFF) shl 8) or (bytes[offset + 1].toInt() and 0xFF)
+ }
+}
+
+// Exact dot centers extracted from the 1536 × 833 reference image supplied for the Wallet screen.
+private const val WORLD_MAP_DOTS = "AkUAHQJSAB0CXgAdAmoAHQJ2AB0BjQApAZkAKQGmACkBsgApAb4AKQHKACkB1wApAeMAKQIUACkCIAApAiwAKQI5ACkCRQApAlEAKQJeACkCagApAnYAKQKCACkCjwApAWgANQF1ADUBgQA1AY0ANQGZADUBpgA1AbIANQG+ADUBygA1AdcANQHjADUB7wA1AfsANQIIADUCFAA1AiAANQItADUCOQA1AkUANQJRADUCXgA1AmoANQJ2ADUCgwA1Ao8ANQKbADUCpwA1ArQANQFcAEIBaABCAXUAQgGBAEIBjQBCAZkAQgGmAEIBsgBCAb4AQgHXAEIB4wBCAe8AQgH8AEICCABCAhQAQgIgAEICLQBCAjkAQgJFAEICUQBCAl4AQgJqAEICdgBCAoMAQgKPAEICmwBCAWgATgF1AE4BgQBOAY0ATgGZAE4BpgBOAb4ATgHLAE4B1wBOAeMATgHvAE4B/ABOAggATgIUAE4CIABOAi0ATgI5AE4CRQBOAlEATgJeAE4CagBOAnYATgKDAE4CjwBOBGEAVQGBAFoBjQBaAZkAWgG+AFoBygBaAdcAWgHjAFoB7wBaAfwAWgIIAFoCFABaAiAAWgItAFoCOQBaAkUAWgJSAFoCXgBaAmoAWgJ2AFoCggBaAo8AWgE3AGEDIgBhAy4AYQM7AGEDRwBhBFUAYQRhAGEEbQBhAcsAZgHjAGYB/ABmAggAZgIUAGYCOQBmAl4AZgJqAGYCdgBmAoIAZgHXAGcB7wBnAiAAZwItAGcCRQBnAlEAZwKPAGcBEgBtASsAbQE3AG0DCgBtAxYAbQMiAG0DLgBtBGEAbQRtAG0EegBtBIYAbQFDAG4COQByAkUAcgH7AHMCCABzAhQAcwIgAHMCLQBzAlEAcwJeAHMCagBzAnYAcwKDAHMCjwBzAO0AegD6AHoBBgB6ARIAegErAHoBUAB6AxYAegMiAHoDOwB6BHoAegSGAHoCCAB/AhQAfwIgAH8CLAB/AjkAfwJGAH8CUQB/Al4AfwJqAH8CdgB/AoMAfwDhAIYA7QCGAPoAhgEGAIYBEgCGAR8AhgErAIYBNwCGAUMAhgFcAIYBaACGA84AhgPaAIYD5wCGA/MAhgRVAIYEYQCGBG4AhgR6AIYEhgCGBJIAhgSfAIYEqwCGBQ0AhgUaAIYFJgCGAggAiwIUAIsCIACLAi0AiwI5AIsCRQCLAlIAiwJeAIsCagCLAnYAiwKDAIsA4QCSAQYAkgFoAJIBdQCSAYEAkgGNAJIDwgCSA84AkgQ8AJIESQCSBFUAkgRhAJIEbgCSBHoAkgSGAJIEkgCSBJ8AkgSrAJIFDQCSBRkAkgUmAJIFMgCSBT4AkgIIAJcCFACXAiAAlwI5AJcCRQCXAmoAlwJ2AJcCLQCYAlEAmAJeAJgCgwCYANUAngDhAJ4A7gCeAR8AngE3AJ4BQwCeAVAAngFcAJ4BdQCeAYEAngGNAJ4DtQCeA8IAngPzAJ4D/wCeBAsAngQXAJ4EMACeBDwAngRJAJ4EVQCeBGEAngRtAJ4EegCeBIYAngSSAJ4EngCeBKsAngS3AJ4EwwCeBNAAngTcAJ4FGQCeBSUAngD6AJ8BKwCfAWgAnwQkAJ8E6ACfAggApAIUAKQCIACkAi0ApAI5AKQCRQCkAlIApAJeAKQCagCkAY0AqgNHAKoD/wCqBFUAqgRhAKoEqwCqBLcAqgTcAKoFDQCqAE4AqwBaAKsA1QCrAOEAqwDtAKsA+gCrAQYAqwESAKsBHgCrASsAqwFEAKsBUACrAWgAqwF0AKsBgQCrAZoAqwGmAKsBsgCrA1MAqwOpAKsDtQCrA8IAqwPmAKsD8wCrBAsAqwQYAKsEJACrBDAAqwQ8AKsESQCrBG4AqwR6AKsEhgCrBJIAqwSfAKsEwwCrBNAAqwToAKsE9QCrBQEAqwUZAKsFJgCrBTIAqwU+AKsFSgCrBbkAqwXFAKsCCACwAhQAsAIgALACLQCwAjkAsAJFALACUgCwAEIAtwBOALcAWgC3AGYAtwBzALcAfwC3AIsAtwCYALcAvAC3AMkAtwDVALcA4QC3APoAtwEGALcBEgC3AR4AtwErALcBNwC3AUMAtwFQALcBXAC3AXUAtwGBALcBjQC3AZoAtwGmALcBsgC3Ab4AtwMiALcDLgC3AzsAtwNHALcDUwC3A18AtwNsALcDeAC3A4QAtwORALcDnQC3A6kAtwO1ALcDwgC3A84AtwPaALcD5gC3A/MAwP8AwwQLAMMEGADD..."
