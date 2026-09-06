@@ -23,8 +23,22 @@ class LedgerDaoTest {
  @Test fun defaultsAreIdempotentAndZero() = runTest {
   val repo = LedgerRepository(db)
   repo.initialize(); repo.initialize()
-  assertEquals(listOf("Checking", "Savings", "Cash"), db.dao().accountSnapshot().map { it.name })
+  assertEquals(
+   listOf("中国银行", "中国工商银行", "北京银行", "中国银行全币种 Visa 白金卡"),
+   db.dao().accountSnapshot().map { it.name }
+  )
   assertTrue(db.dao().accountSnapshot().all { it.openingBalanceCny == 0L })
+ }
+ @Test fun legacyUntouchedDefaultsAreUpgraded() = runTest {
+  val dao = db.dao()
+  dao.insertAccount(Account(name = "Checking", accountType = "Checking", sortOrder = 0))
+  dao.insertAccount(Account(name = "Savings", accountType = "Savings", sortOrder = 1))
+  dao.insertAccount(Account(name = "Cash", accountType = "Cash", sortOrder = 2))
+  LedgerRepository(db).initialize()
+  assertEquals(
+   listOf("中国银行", "中国工商银行", "北京银行", "中国银行全币种 Visa 白金卡"),
+   dao.accountSnapshot().map { it.name }
+  )
  }
  @Test fun insertEditDeleteAndProtectAccount() = runTest {
   val repo = LedgerRepository(db)
@@ -41,6 +55,6 @@ class LedgerDaoTest {
   repo.deleteTransaction(saved.id)
   assertTrue(db.dao().transactionSnapshot().isEmpty())
   repo.deleteAccount(account.id)
-  assertEquals(2, db.dao().accountSnapshot().size)
+  assertEquals(3, db.dao().accountSnapshot().size)
  }
 }
