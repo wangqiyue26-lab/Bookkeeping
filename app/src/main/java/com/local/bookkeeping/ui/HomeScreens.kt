@@ -1,64 +1,387 @@
 package com.local.bookkeeping.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.local.bookkeeping.data.database.*
+import com.local.bookkeeping.domain.Money
 import java.time.YearMonth
 
 @Composable
 fun HomeScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Unit) {
- LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+ LazyColumn(
+  contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 28.dp),
+  verticalArrangement = Arrangement.spacedBy(20.dp)
+ ) {
+  item { BankingHeader() }
+
   item {
-   Text("Dollar Ledger", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-   Text("YOUR MONEY, CLEARLY.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 6.dp))
+   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    Text("My Accounts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    TextButton(onClick = { navigate("accountEdit/0") }) { Text("+ Add") }
+   }
   }
+
   item {
-   Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-     Text("TOTAL BALANCE", style = MaterialTheme.typography.labelLarge)
-     AmountBlock(state.totalCny, state, true)
-     if (state.rate == null) {
-      Text("Exchange rate unavailable")
-      TextButton(onClick = { navigate("settings") }) { Text("Set Rate") }
-     } else {
-      Text("1 CNY = $" + state.rate, style = MaterialTheme.typography.bodySmall)
-      Text(if (state.settings.manualRateEnabled) "Manual rate · " + state.rateDate else "Saved rate · " + state.rateDate, style = MaterialTheme.typography.bodySmall)
+   if (state.activeAccounts.isEmpty()) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
+     Text("Preparing your accounts…", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+   } else {
+    LazyRow(
+     horizontalArrangement = Arrangement.spacedBy(14.dp),
+     contentPadding = PaddingValues(end = 8.dp)
+    ) {
+     itemsIndexed(state.activeAccounts, key = { _, account -> "bank-card-${account.id}" }) { index, account ->
+      BankAccountCard(account, state.balance(account.id), state, index) { navigate("account/${account.id}") }
      }
-     TextButton(onClick = vm::refreshRate, enabled = !state.settings.manualRateEnabled) { Text("Refresh rate") }
     }
    }
   }
+
   item {
-   Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-    Button(onClick = { navigate("add/Expense") }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Expense") }
-    OutlinedButton(onClick = { navigate("add/Income") }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Income") }
-   }
+   QuickActions(
+    onExpense = { navigate("add/Expense") },
+    onIncome = { navigate("add/Income") },
+    onTransactions = { navigate("transactions") },
+    onStatistics = { navigate("statistics") }
+   )
   }
+
+  item { BalanceAndRateCard(state, vm) { navigate("settings") } }
+
   item {
-   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-    SectionTitle("Accounts")
-    TextButton(onClick = { navigate("accountEdit/0") }) { Text("Add account") }
-   }
+   RecentActivityCard(
+    state = state,
+    onSeeAll = { navigate("transactions") },
+    onTransaction = { navigate("transaction/$it") }
+   )
   }
-  items(state.activeAccounts, key = { "a" + it.id }) { account ->
-   Card(onClick = { navigate("account/" + account.id) }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
-    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-     Text(account.name, style = MaterialTheme.typography.titleMedium)
-     Text("Local ID •••• " + account.id.toString().padStart(4, '0').takeLast(4), style = MaterialTheme.typography.labelSmall)
-     AmountBlock(state.balance(account.id), state)
-     Text("Available balance", style = MaterialTheme.typography.bodySmall)
+ }
+}
+
+@Composable
+private fun BankingHeader() {
+ Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+  Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+   Text(
+    "Hello!",
+    style = MaterialTheme.typography.headlineMedium,
+    fontWeight = FontWeight.Bold,
+    fontStyle = FontStyle.Italic,
+    color = MaterialTheme.colorScheme.primary
+   )
+   Text("Dollar Ledger", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+  Box {
+   Surface(
+    modifier = Modifier.size(48.dp),
+    shape = CircleShape,
+    color = MaterialTheme.colorScheme.surface,
+    shadowElevation = 3.dp
+   ) {
+    Box(contentAlignment = Alignment.Center) {
+     Text("$", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    }
+   }
+   Box(
+    Modifier
+     .size(10.dp)
+     .align(Alignment.TopEnd)
+     .background(Color(0xFFEC2C4B), CircleShape)
+   )
+  }
+ }
+}
+
+private data class BankVisual(
+ val colors: List<Color>,
+ val accent: Color,
+ val badge: String,
+ val network: String
+)
+
+private fun bankVisual(account: Account, index: Int): BankVisual {
+ val name = account.name.lowercase()
+ return when {
+  "visa" in name || "全币种" in name -> BankVisual(
+   listOf(Color(0xFF111827), Color(0xFF273750), Color(0xFF45556F)),
+   Color(0xFFD9E0EA), "BOC", "VISA PLATINUM"
+  )
+  "工商" in name || "icbc" in name -> BankVisual(
+   listOf(Color(0xFFC91D32), Color(0xFFA70E24), Color(0xFF7F071A)),
+   Color(0xFFFFD5DB), "工", "ICBC"
+  )
+  "北京银行" in name || "bank of beijing" in name -> BankVisual(
+   listOf(Color(0xFF174D98), Color(0xFF103A7B), Color(0xFF09285A)),
+   Color(0xFFFF6977), "京", "BANK OF BEIJING"
+  )
+  "中国银行" in name || "bank of china" in name -> BankVisual(
+   listOf(Color(0xFFB52335), Color(0xFF94162A), Color(0xFF73101F)),
+   Color(0xFFFFD5DB), "中", "BANK OF CHINA"
+  )
+  else -> listOf(
+   BankVisual(listOf(Color(0xFF153F84), Color(0xFF0A2856)), Color(0xFFBFD4FF), "DL", "DOLLAR LEDGER"),
+   BankVisual(listOf(Color(0xFF8D2031), Color(0xFF551421)), Color(0xFFFFD2DA), "DL", "DOLLAR LEDGER"),
+   BankVisual(listOf(Color(0xFF30506F), Color(0xFF182B42)), Color(0xFFC9DBEC), "DL", "DOLLAR LEDGER"),
+   BankVisual(listOf(Color(0xFF3A315F), Color(0xFF211C3B)), Color(0xFFDCD4FF), "DL", "DOLLAR LEDGER")
+  )[index % 4]
+ }
+}
+
+@Composable
+private fun BankAccountCard(account: Account, balanceCny: Long, state: LedgerState, index: Int, onClick: () -> Unit) {
+ val visual = bankVisual(account, index)
+ Card(
+  onClick = onClick,
+  modifier = Modifier.width(316.dp).height(194.dp),
+  shape = RoundedCornerShape(24.dp),
+  colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+  elevation = CardDefaults.cardElevation(defaultElevation = 8.dp, pressedElevation = 3.dp)
+ ) {
+  Box(
+   Modifier
+    .fillMaxSize()
+    .background(Brush.linearGradient(visual.colors))
+    .padding(20.dp)
+  ) {
+   Box(
+    Modifier
+     .size(150.dp)
+     .offset(x = 212.dp, y = (-55).dp)
+     .background(Color.White.copy(alpha = 0.06f), CircleShape)
+   )
+   Box(
+    Modifier
+     .size(100.dp)
+     .offset(x = 245.dp, y = 100.dp)
+     .background(visual.accent.copy(alpha = 0.08f), CircleShape)
+   )
+
+   Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+     Column(Modifier.weight(1f)) {
+      Text(
+       account.name,
+       color = Color.White,
+       style = MaterialTheme.typography.titleMedium,
+       fontWeight = FontWeight.Bold,
+       maxLines = 1,
+       overflow = TextOverflow.Ellipsis
+      )
+      Text(visual.network, color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelSmall)
+     }
+     Surface(shape = RoundedCornerShape(10.dp), color = Color.White.copy(alpha = 0.14f)) {
+      Text(
+       visual.badge,
+       Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+       color = Color.White,
+       fontWeight = FontWeight.Bold,
+       style = MaterialTheme.typography.labelLarge
+      )
+     }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+     Text("CURRENT BALANCE", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelSmall)
+     Text(state.usd(balanceCny), color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+     if (state.settings.showCnySecondaryAmount) {
+      Text("≈ ${Money.display(balanceCny, false)}", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.bodySmall)
+     }
+    }
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween) {
+     Text(
+      "••••  ••••  ••••  ${account.id.toString().padStart(4, '0').takeLast(4)}",
+      color = Color.White.copy(alpha = 0.92f),
+      style = MaterialTheme.typography.bodyMedium,
+      fontWeight = FontWeight.Medium
+     )
+     Text(
+      if (visual.network.startsWith("VISA")) "VISA" else account.accountType.uppercase(),
+      color = Color.White,
+      style = MaterialTheme.typography.labelMedium,
+      fontWeight = FontWeight.Bold
+     )
     }
    }
   }
-  item { SectionTitle("Recent Activity") }
-  if (state.transactions.isEmpty()) item { Text("No transactions yet. Add your first income or expense.") }
-  items(state.transactions.take(7), key = { "t" + it.id }) { t -> TransactionRow(t, state) { navigate("transaction/" + t.id) } }
+ }
+}
+
+@Composable
+private fun QuickActions(
+ onExpense: () -> Unit,
+ onIncome: () -> Unit,
+ onTransactions: () -> Unit,
+ onStatistics: () -> Unit
+) {
+ Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+  QuickAction("−", "Expense", onExpense, Modifier.weight(1f))
+  QuickAction("+", "Income", onIncome, Modifier.weight(1f))
+  QuickAction("≡", "Activity", onTransactions, Modifier.weight(1f))
+  QuickAction("↗", "Stats", onStatistics, Modifier.weight(1f))
+ }
+}
+
+@Composable
+private fun QuickAction(symbol: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+ Surface(
+  onClick = onClick,
+  modifier = modifier.height(92.dp),
+  shape = RoundedCornerShape(18.dp),
+  color = MaterialTheme.colorScheme.surface,
+  shadowElevation = 2.dp
+ ) {
+  Column(
+   Modifier.fillMaxSize().padding(vertical = 12.dp),
+   horizontalAlignment = Alignment.CenterHorizontally,
+   verticalArrangement = Arrangement.SpaceBetween
+  ) {
+   Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(40.dp)) {
+    Box(contentAlignment = Alignment.Center) {
+     Text(symbol, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    }
+   }
+   Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+  }
+ }
+}
+
+@Composable
+private fun BalanceAndRateCard(state: LedgerState, vm: LedgerViewModel, onSettings: () -> Unit) {
+ Card(
+  colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+  modifier = Modifier.fillMaxWidth(),
+  shape = RoundedCornerShape(20.dp),
+  elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+ ) {
+  Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+    Column(Modifier.weight(1f)) {
+     Text("TOTAL BALANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+     Text(state.usd(state.totalCny), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+     if (state.settings.showCnySecondaryAmount) {
+      Text("≈ ${Money.display(state.totalCny, false)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+     }
+    }
+    Column(horizontalAlignment = Alignment.End) {
+     Text("CNY → USD", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+     Text(state.rate?.let { "$it" } ?: "Unavailable", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+     Text(state.rateDate.ifBlank { "No saved rate" }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+   }
+   HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+   Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Text(
+     if (state.settings.manualRateEnabled) "Manual exchange rate" else "Saved exchange rate",
+     color = MaterialTheme.colorScheme.onSurfaceVariant,
+     style = MaterialTheme.typography.bodySmall
+    )
+    if (state.rate == null) {
+     TextButton(onClick = onSettings) { Text("Set rate") }
+    } else {
+     TextButton(onClick = vm::refreshRate, enabled = !state.settings.manualRateEnabled) { Text("Refresh") }
+    }
+   }
+  }
+ }
+}
+
+@Composable
+private fun RecentActivityCard(state: LedgerState, onSeeAll: () -> Unit, onTransaction: (Long) -> Unit) {
+ Card(
+  colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+  modifier = Modifier.fillMaxWidth(),
+  shape = RoundedCornerShape(20.dp),
+  elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+ ) {
+  Column {
+   Row(
+    Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp, top = 16.dp, bottom = 8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+   ) {
+    Text("Transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    TextButton(onClick = onSeeAll) { Text("See all") }
+   }
+   if (state.transactions.isEmpty()) {
+    Text(
+     "No transactions yet. Add your first income or expense.",
+     modifier = Modifier.padding(horizontal = 18.dp, vertical = 22.dp),
+     color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+   } else {
+    state.transactions.take(5).forEachIndexed { index, entry ->
+     if (index > 0) HorizontalDivider(Modifier.padding(start = 78.dp), color = MaterialTheme.colorScheme.outlineVariant)
+     HomeTransactionRow(entry, state) { onTransaction(entry.id) }
+    }
+   }
+  }
+ }
+}
+
+@Composable
+private fun HomeTransactionRow(entry: LedgerTransaction, state: LedgerState, onClick: () -> Unit) {
+ val income = entry.type == "Income"
+ val sign = if (income) "+" else "−"
+ val title = entry.note.trim().ifBlank { entry.category }
+ Row(
+  Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 13.dp),
+  verticalAlignment = Alignment.CenterVertically
+ ) {
+  Surface(
+   modifier = Modifier.size(46.dp),
+   shape = RoundedCornerShape(13.dp),
+   color = MaterialTheme.colorScheme.primaryContainer
+  ) {
+   Box(contentAlignment = Alignment.Center) {
+    Text(entry.category.take(1).uppercase(), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+   }
+  }
+  Spacer(Modifier.width(14.dp))
+  Column(Modifier.weight(1f)) {
+   Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+   Text(
+    "${entry.category} · ${state.accounts.find { it.id == entry.accountId }?.name ?: entry.transactionDate}",
+    style = MaterialTheme.typography.bodySmall,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    maxLines = 1,
+    overflow = TextOverflow.Ellipsis
+   )
+  }
+  Spacer(Modifier.width(10.dp))
+  Column(horizontalAlignment = Alignment.End) {
+   Text(
+    sign + Money.display(entry.amountUsd),
+    fontWeight = FontWeight.SemiBold,
+    color = if (income) IncomeGreen else MaterialTheme.colorScheme.onSurface
+   )
+   if (state.settings.showCnySecondaryAmount) {
+    Text(
+     "≈ $sign${Money.display(entry.amountCny, false)}",
+     style = MaterialTheme.typography.labelSmall,
+     color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+   }
+  }
  }
 }
 
