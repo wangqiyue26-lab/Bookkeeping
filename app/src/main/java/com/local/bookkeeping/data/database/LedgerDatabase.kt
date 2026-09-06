@@ -1,6 +1,8 @@
 package com.local.bookkeeping.data.database
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
@@ -11,6 +13,7 @@ data class Account(
  val name: String,
  val accountType: String,
  val openingBalanceCny: Long = 0,
+ val creditCardDebtUsdCents: Long = 0,
  val createdAt: Long = System.currentTimeMillis(),
  val sortOrder: Int = 0,
  val isArchived: Boolean = false
@@ -57,7 +60,7 @@ interface LedgerDao {
  @Query("SELECT * FROM exchange_rate_cache WHERE id = 1") suspend fun rateSnapshot(): ExchangeRateCache?
  @Insert suspend fun insertAccount(account: Account): Long
  @Update suspend fun updateAccount(account: Account)
- @Query("DELETE FROM accounts WHERE id = :id AND NOT EXISTS (SELECT 1 FROM transactions WHERE accountId = :id) AND openingBalanceCny = 0") suspend fun deleteEmptyAccount(id: Long): Int
+ @Query("DELETE FROM accounts WHERE id = :id AND NOT EXISTS (SELECT 1 FROM transactions WHERE accountId = :id) AND openingBalanceCny = 0 AND creditCardDebtUsdCents = 0") suspend fun deleteEmptyAccount(id: Long): Int
  @Insert suspend fun insertTransaction(entry: LedgerTransaction): Long
  @Update suspend fun updateTransaction(entry: LedgerTransaction)
  @Query("DELETE FROM transactions WHERE id = :id") suspend fun deleteTransaction(id: Long)
@@ -67,7 +70,13 @@ interface LedgerDao {
  @Query("DELETE FROM exchange_rate_cache") suspend fun clearRates()
 }
 
-@Database(entities = [Account::class, LedgerTransaction::class, ExchangeRateCache::class], version = 1, exportSchema = false)
+val MIGRATION_1_2 = object : Migration(1, 2) {
+ override fun migrate(db: SupportSQLiteDatabase) {
+  db.execSQL("ALTER TABLE accounts ADD COLUMN creditCardDebtUsdCents INTEGER NOT NULL DEFAULT 0")
+ }
+}
+
+@Database(entities = [Account::class, LedgerTransaction::class, ExchangeRateCache::class], version = 2, exportSchema = false)
 abstract class LedgerDatabase : RoomDatabase() {
  abstract fun dao(): LedgerDao
 }
