@@ -6,7 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,3 +36,28 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 30
+      - name: Read app version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          test -n "$VERSION"
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${APP_VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              dist/DollarLedger.apk#DollarLedger-v${APP_VERSION}.apk \
+              dist/SHA256SUMS.txt#SHA256SUMS.txt \
+              --clobber
+          else
+            gh release create "$TAG" \
+              dist/DollarLedger.apk#DollarLedger-v${APP_VERSION}.apk \
+              dist/SHA256SUMS.txt#SHA256SUMS.txt \
+              --target "$GITHUB_SHA" \
+              --title "Dollar Ledger v${APP_VERSION}" \
+              --notes "Dollar Ledger v${APP_VERSION}: Wallet tab with net balance, redesigned Statistics, card-based Settings, navy banking UI, and credit-card debt support."
+          fi
