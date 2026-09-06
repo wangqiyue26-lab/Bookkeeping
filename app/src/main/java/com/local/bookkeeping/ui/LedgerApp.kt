@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
@@ -29,7 +30,7 @@ fun LedgerApp(vm: LedgerViewModel) {
    bottomBar = {
     if (route in tabs.map { it.first }) {
      NavigationBar(
-      containerColor = MaterialTheme.colorScheme.surface,
+      containerColor = Navy,
       tonalElevation = 0.dp
      ) {
       tabs.forEachIndexed { index, (path, title) ->
@@ -41,11 +42,11 @@ fun LedgerApp(vm: LedgerViewModel) {
         icon = { Icon(navIcon(index), contentDescription = title) },
         label = { Text(title) },
         colors = NavigationBarItemDefaults.colors(
-         selectedIconColor = MaterialTheme.colorScheme.primary,
-         selectedTextColor = MaterialTheme.colorScheme.primary,
-         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+         selectedIconColor = Color.White,
+         selectedTextColor = Color.White,
+         indicatorColor = Color.White.copy(alpha = 0.16f),
+         unselectedIconColor = Color.White.copy(alpha = 0.74f),
+         unselectedTextColor = Color.White.copy(alpha = 0.74f)
         )
        )
       }
