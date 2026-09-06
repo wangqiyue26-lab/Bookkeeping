@@ -24,8 +24,7 @@ fun LedgerApp(vm: LedgerViewModel) {
   "home" to "Home",
   "wallet" to "Wallet",
   "transactions" to "Transactions",
-  "statistics" to "Statistics",
-  "settings" to "Settings"
+  "statistics" to "Statistics"
  )
  val snack = remember { SnackbarHostState() }
  LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.dismissMessage() } }
@@ -43,7 +42,7 @@ fun LedgerApp(vm: LedgerViewModel) {
          nav.navigate(path) { popUpTo("home") { saveState = true }; launchSingleTop = true; restoreState = true }
         },
         icon = { Icon(navIcon(index), contentDescription = title) },
-        label = { Text(title, style = MaterialTheme.typography.labelSmall) },
+        label = { Text(title) },
         colors = NavigationBarItemDefaults.colors(
          selectedIconColor = Color.White,
          selectedTextColor = Color.White,
@@ -104,12 +103,8 @@ private fun navIcon(index: Int): ImageVector = ImageVector.Builder("Navigation",
    2 -> {
     for (y in listOf(5f, 11f, 17f)) { moveTo(4f, y); lineTo(20f, y); lineTo(20f, y + 2); lineTo(4f, y + 2); close() }
    }
-   3 -> {
-    for ((x, y) in listOf(4f to 14f, 10f to 9f, 16f to 3f)) { moveTo(x, y); lineTo(x + 4, y); lineTo(x + 4, 21f); lineTo(x, 21f); close() }
-   }
    else -> {
-    moveTo(4f, 4f); lineTo(20f, 4f); lineTo(20f, 20f); lineTo(4f, 20f); close()
-    moveTo(8f, 8f); lineTo(8f, 16f); lineTo(16f, 16f); lineTo(16f, 8f); close()
+    for ((x, y) in listOf(4f to 14f, 10f to 9f, 16f to 3f)) { moveTo(x, y); lineTo(x + 4, y); lineTo(x + 4, 21f); lineTo(x, 21f); close() }
    }
   }
  }
