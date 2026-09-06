@@ -17,13 +17,14 @@ class LedgerRepository(val db: LedgerDatabase) {
    existing.isEmpty() -> defaults()
    shouldUpgradeLegacyDefaults(existing) -> upgradeLegacyDefaults(existing)
   }
+  ensureVisaCreditCardType()
  }
 
  private val defaultAccountSpecs = listOf(
   Triple("中国银行", "Checking", 0),
   Triple("中国工商银行", "Savings", 1),
   Triple("北京银行", "Checking", 2),
-  Triple("中国银行全币种 Visa 白金卡", "Other", 3)
+  Triple("中国银行全币种 Visa 白金卡", "Credit Card", 3)
  )
 
  private suspend fun defaults() {
@@ -47,14 +48,25 @@ class LedgerRepository(val db: LedgerDatabase) {
   dao.insertAccount(Account(name = name, accountType = type, sortOrder = order))
  }
 
+ private suspend fun ensureVisaCreditCardType() {
+  dao.accountSnapshot().forEach { account ->
+   val visaPlatinum = account.name.contains("全币种", ignoreCase = true) ||
+    (account.name.contains("visa", ignoreCase = true) && account.name.contains("中国银行"))
+   if (visaPlatinum && account.accountType != "Credit Card") {
+    dao.updateAccount(account.copy(accountType = "Credit Card"))
+   }
+  }
+ }
+
  suspend fun saveAccount(account: Account) {
   require(account.name.isNotBlank() && account.name.length <= 60) { "Enter an account name (up to 60 characters)." }
   require(account.accountType in Categories.accountTypes)
   require(account.openingBalanceCny in 0..Money.MAX_CENTS)
+  require(account.creditCardDebtUsdCents in 0..Money.MAX_CENTS) { "Enter a valid USD debt amount." }
   if (account.id == 0L) dao.insertAccount(account) else dao.updateAccount(account)
  }
  suspend fun deleteAccount(id: Long) {
-  require(dao.deleteEmptyAccount(id) == 1) { "Only accounts with no transactions and zero opening balance can be deleted." }
+  require(dao.deleteEmptyAccount(id) == 1) { "Only accounts with no transactions, zero opening balance, and zero credit-card debt can be deleted." }
  }
  suspend fun saveTransaction(entry: LedgerTransaction) = db.withTransaction {
   require(entry.type in listOf("Income", "Expense"))
