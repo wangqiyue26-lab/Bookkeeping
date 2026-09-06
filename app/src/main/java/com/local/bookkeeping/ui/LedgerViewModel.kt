@@ -52,11 +52,14 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
   .stateIn(viewModelScope, SharingStarted.Eagerly, LedgerState())
  private val _pendingImport = MutableStateFlow<LedgerBackup?>(null)
  val pendingImport = _pendingImport.asStateFlow()
+
  init {
   action { app.ledger.initialize() }
   viewModelScope.launch { refresh(false) }
  }
+
  fun dismissMessage() { _message.value = null }
+
  fun action(success: (() -> Unit)? = null, work: suspend () -> Unit) {
   if (_busy.value) return
   _busy.value = true
@@ -68,7 +71,9 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
    finally { _busy.value = false }
   }
  }
+
  fun refreshRate() { viewModelScope.launch { refresh(true) } }
+
  private suspend fun refresh(force: Boolean) {
   if (_refreshing.value) return
   _refreshing.value = true
@@ -77,26 +82,45 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
   catch (_: Exception) { _message.value = "Unable to update exchange rate. Using your last saved rate, if available." }
   finally { _refreshing.value = false }
  }
+
  fun saveAccount(account: Account, done: () -> Unit) = action(done) { app.ledger.saveAccount(account) }
  fun deleteAccount(id: Long, done: () -> Unit) = action(done) { app.ledger.deleteAccount(id) }
  fun saveTransaction(entry: LedgerTransaction, done: () -> Unit) = action(done) { app.ledger.saveTransaction(entry) }
  fun deleteTransaction(id: Long, done: () -> Unit) = action(done) { app.ledger.deleteTransaction(id) }
+
+ fun saveTransfer(
+  fromAccountId: Long,
+  toAccountId: Long,
+  amountCny: Long,
+  exchangeRate: String,
+  exchangeRateDate: String,
+  transactionDate: String,
+  note: String,
+  done: () -> Unit
+ ) = action(done) {
+  app.ledger.saveTransfer(fromAccountId, toAccountId, amountCny, exchangeRate, exchangeRateDate, transactionDate, note)
+ }
+
  fun settings(value: LedgerSettings) = action {
   if (value.manualRateEnabled) Money.validRate(value.manualRate)
   app.settings.save(value)
  }
+
  fun manualRate(value: String) = action {
   val rate = Money.validRate(value).stripTrailingZeros().toPlainString()
   app.settings.save(app.settings.settings.first().copy(manualRate = rate, manualRateEnabled = true, manualRateDate = LocalDate.now().toString()))
  }
+
  fun disableManual() = action(success = { refreshRate() }) {
   app.settings.save(app.settings.settings.first().copy(manualRateEnabled = false))
  }
+
  fun reset() = action {
   app.ledger.reset()
   val first = app.ledger.dao.accountSnapshot().first().id
   app.settings.save(app.settings.settings.first().copy(defaultAccountId = first))
  }
+
  fun export(uri: Uri?, csv: Boolean) {
   if (uri == null) return
   action {
@@ -106,6 +130,7 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
    _message.value = if (csv) "CSV exported." else "Backup exported."
   }
  }
+
  fun readImport(uri: Uri?) {
   if (uri == null) return
   action {
@@ -128,7 +153,9 @@ class LedgerViewModel(application: Application) : AndroidViewModel(application) 
    catch (_: Exception) { _message.value = "Invalid backup. Choose a Dollar Ledger JSON backup (up to 20 MB)." }
   }
  }
+
  fun cancelImport() { _pendingImport.value = null }
+
  fun confirmImport() {
   val backup = _pendingImport.value ?: return
   action(success = { _pendingImport.value = null }) {
