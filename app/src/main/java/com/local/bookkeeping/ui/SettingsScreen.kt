@@ -195,7 +195,7 @@ fun SettingsScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -
    SettingsCard("About", "i") {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
      Text("Dollar Ledger", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-     Text("Version 2.0.0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+     Text("Version 2.0.1", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
      Text(
       "Local personal finance tracker. No bank is connected. Your data stays on this device unless you export it. Exchange rates are provided by Frankfurter v2.",
       style = MaterialTheme.typography.bodySmall,

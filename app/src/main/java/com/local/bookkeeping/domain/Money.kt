@@ -39,7 +39,7 @@ object Money {
 }
 
 object Categories {
- val expense = listOf("Food", "Shopping", "Transportation", "Housing", "Utilities", "Healthcare", "Entertainment", "Travel", "Education", "Family", "Other")
+ val expense = listOf("Food", "Shopping", "Transportation", "Housing", "Utilities", "Healthcare", "Entertainment", "Travel", "Education", "Family", "Transfer", "Other")
  val income = listOf("Salary", "Bonus", "Investment", "Refund", "Transfer", "Other")
  fun forType(type: String) = if (type == "Income") income else expense
  val accountTypes = listOf("Checking", "Savings", "Cash", "Credit Card", "Other")

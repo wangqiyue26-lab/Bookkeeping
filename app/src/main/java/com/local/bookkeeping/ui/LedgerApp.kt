@@ -63,10 +63,13 @@ fun LedgerApp(vm: LedgerViewModel) {
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     NavHost(navController = nav, startDestination = "home", modifier = Modifier.weight(1f)) {
      composable("home") { HomeV2Screen(state) { nav.navigate(it) } }
-     composable("wallet") { WalletScreen(state, vm) { nav.navigate(it) } }
-     composable("transactions") { TransactionsScreen(state) { nav.navigate("transaction/$it") } }
+     composable("wallet") { WalletScreen(state) }
+     composable("transactions") { TransactionsV2Screen(state) { nav.navigate("transaction/$it") } }
      composable("statistics") { StatisticsScreen(state) }
      composable("settings") { SettingsScreen(state, vm) { nav.navigate(it) } }
+     composable("transfer") {
+      TransferScreen(state, vm, onSettings = { nav.navigate("settings") }) { nav.popBackStack() }
+     }
      composable("account/{id}") { back ->
       AccountScreen(back.arguments?.getString("id")?.toLongOrNull() ?: 0, state) { nav.navigate(it) }
      }

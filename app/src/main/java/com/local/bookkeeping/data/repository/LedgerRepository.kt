@@ -65,9 +65,11 @@ class LedgerRepository(val db: LedgerDatabase) {
   require(account.creditCardDebtUsdCents in 0..Money.MAX_CENTS) { "Enter a valid USD debt amount." }
   if (account.id == 0L) dao.insertAccount(account) else dao.updateAccount(account)
  }
+
  suspend fun deleteAccount(id: Long) {
   require(dao.deleteEmptyAccount(id) == 1) { "Only accounts with no transactions, zero opening balance, and zero credit-card debt can be deleted." }
  }
+
  suspend fun saveTransaction(entry: LedgerTransaction) = db.withTransaction {
   require(entry.type in listOf("Income", "Expense"))
   require(entry.amountCny in 1..Money.MAX_CENTS) { "Enter a positive amount." }
@@ -79,7 +81,68 @@ class LedgerRepository(val db: LedgerDatabase) {
   val checked = entry.copy(amountUsd = Money.usdCents(entry.amountCny, entry.exchangeRate), updatedAt = System.currentTimeMillis())
   if (checked.id == 0L) dao.insertTransaction(checked) else dao.updateTransaction(checked)
  }
+
+ suspend fun saveTransfer(
+  fromAccountId: Long,
+  toAccountId: Long,
+  amountCny: Long,
+  exchangeRate: String,
+  exchangeRateDate: String,
+  transactionDate: String,
+  note: String
+ ) = db.withTransaction {
+  require(fromAccountId != toAccountId) { "Choose two different accounts." }
+  require(amountCny in 1..Money.MAX_CENTS) { "Enter a positive amount." }
+  require(note.length <= 2000) { "Note must be at most 2000 characters." }
+  LocalDate.parse(transactionDate)
+  LocalDate.parse(exchangeRateDate)
+  Money.validRate(exchangeRate)
+
+  val accounts = dao.accountSnapshot().filterNot { it.isArchived }
+  val from = accounts.find { it.id == fromAccountId }
+  val to = accounts.find { it.id == toAccountId }
+  require(from != null && to != null) { "Choose active accounts." }
+  require(from.accountType != "Credit Card" && to.accountType != "Credit Card") {
+   "Transfers are available between asset accounts. Edit credit-card debt separately."
+  }
+
+  val usd = Money.usdCents(amountCny, exchangeRate)
+  val now = System.currentTimeMillis()
+  val cleanNote = note.trim()
+  dao.insertTransaction(
+   LedgerTransaction(
+    accountId = from.id,
+    type = "Expense",
+    amountCny = amountCny,
+    amountUsd = usd,
+    exchangeRate = exchangeRate,
+    exchangeRateDate = exchangeRateDate,
+    category = "Transfer",
+    note = cleanNote.ifBlank { "Transfer to ${to.name}" },
+    transactionDate = transactionDate,
+    createdAt = now,
+    updatedAt = now
+   )
+  )
+  dao.insertTransaction(
+   LedgerTransaction(
+    accountId = to.id,
+    type = "Income",
+    amountCny = amountCny,
+    amountUsd = usd,
+    exchangeRate = exchangeRate,
+    exchangeRateDate = exchangeRateDate,
+    category = "Transfer",
+    note = cleanNote.ifBlank { "Transfer from ${from.name}" },
+    transactionDate = transactionDate,
+    createdAt = now,
+    updatedAt = now
+   )
+  )
+ }
+
  suspend fun deleteTransaction(id: Long) = dao.deleteTransaction(id)
+
  suspend fun reset() = db.withTransaction {
   dao.clearTransactions(); dao.clearAccounts(); defaults()
  }

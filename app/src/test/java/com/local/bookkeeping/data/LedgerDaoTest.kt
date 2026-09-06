@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.local.bookkeeping.data.database.*
 import com.local.bookkeeping.data.repository.LedgerRepository
+import com.local.bookkeeping.domain.Money
 import kotlinx.coroutines.test.runTest
 import org.junit.*
 import org.junit.Assert.*
@@ -57,6 +58,23 @@ class LedgerDaoTest {
   val card = db.dao().accountSnapshot().last()
   repo.saveAccount(card.copy(creditCardDebtUsdCents = 12500L))
   assertEquals(0, db.dao().deleteEmptyAccount(card.id))
+ }
+ @Test fun transferCreatesBalancedPair() = runTest {
+  val repo = LedgerRepository(db)
+  repo.initialize()
+  val accounts = db.dao().accountSnapshot().filter { it.accountType != "Credit Card" }
+  val from = accounts[0]
+  val to = accounts[1]
+  repo.saveAccount(from.copy(openingBalanceCny = 100000L))
+  repo.saveTransfer(from.id, to.id, 25000L, "0.139", "2026-09-07", "2026-09-07", "")
+  val entries = db.dao().transactionSnapshot()
+  assertEquals(2, entries.size)
+  assertTrue(entries.all { it.category == "Transfer" })
+  val fromBalance = Money.balance(100000L, entries.filter { it.accountId == from.id }.map { it.type to it.amountCny })
+  val toBalance = Money.balance(0L, entries.filter { it.accountId == to.id }.map { it.type to it.amountCny })
+  assertEquals(75000L, fromBalance)
+  assertEquals(25000L, toBalance)
+  assertEquals(100000L, fromBalance + toBalance)
  }
  @Test fun insertEditDeleteAndProtectAccount() = runTest {
   val repo = LedgerRepository(db)

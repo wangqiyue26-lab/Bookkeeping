@@ -64,7 +64,7 @@ fun HomeV2Screen(state: LedgerState, navigate: (String) -> Unit) {
    ) {
     V2QuickAction("−", "Expense", { navigate("add/Expense") }, Modifier.weight(1f))
     V2QuickAction("+", "Income", { navigate("add/Income") }, Modifier.weight(1f))
-    V2QuickAction("≡", "Activity", { navigate("transactions") }, Modifier.weight(1f))
+    V2QuickAction("⇄", "Transfer", { navigate("transfer") }, Modifier.weight(1f))
     V2QuickAction("↗", "Stats", { navigate("statistics") }, Modifier.weight(1f))
    }
   }
