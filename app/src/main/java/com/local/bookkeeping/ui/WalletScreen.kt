@@ -118,7 +118,7 @@ private fun DottedWorldMap(modifier: Modifier = Modifier) {
     val land = northAmerica || centralAmerica || southAmerica || greenland || europe || africa || asia || japan || australia || madagascar
     if (land) {
      drawCircle(
-      color = Navy.copy(alpha = 0.82f),
+      color = Color.Black,
       radius = 2.1.dp.toPx(),
       center = Offset(x * size.width, y * size.height)
      )
