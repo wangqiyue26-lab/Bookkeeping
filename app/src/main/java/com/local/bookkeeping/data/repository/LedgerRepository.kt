@@ -10,14 +10,43 @@ class LedgerRepository(val db: LedgerDatabase) {
  val accounts = dao.accounts()
  val transactions = dao.transactions()
  val rate = dao.rate()
+
  suspend fun initialize() = db.withTransaction {
-  if (dao.accountSnapshot().isEmpty()) defaults()
- }
- private suspend fun defaults() {
-  listOf("Checking", "Savings", "Cash").forEachIndexed { i, name ->
-   dao.insertAccount(Account(name = name, accountType = name, sortOrder = i))
+  val existing = dao.accountSnapshot()
+  when {
+   existing.isEmpty() -> defaults()
+   shouldUpgradeLegacyDefaults(existing) -> upgradeLegacyDefaults(existing)
   }
  }
+
+ private val defaultAccountSpecs = listOf(
+  Triple("中国银行", "Checking", 0),
+  Triple("中国工商银行", "Savings", 1),
+  Triple("北京银行", "Checking", 2),
+  Triple("中国银行全币种 Visa 白金卡", "Other", 3)
+ )
+
+ private suspend fun defaults() {
+  defaultAccountSpecs.forEach { (name, type, order) ->
+   dao.insertAccount(Account(name = name, accountType = type, sortOrder = order))
+  }
+ }
+
+ private suspend fun shouldUpgradeLegacyDefaults(existing: List<Account>): Boolean {
+  if (existing.size != 3 || dao.transactionSnapshot().isNotEmpty()) return false
+  if (existing.any { it.openingBalanceCny != 0L || it.isArchived }) return false
+  return existing.sortedBy { it.sortOrder }.map { it.name } == listOf("Checking", "Savings", "Cash")
+ }
+
+ private suspend fun upgradeLegacyDefaults(existing: List<Account>) {
+  val sorted = existing.sortedBy { it.sortOrder }
+  defaultAccountSpecs.take(3).forEachIndexed { index, (name, type, order) ->
+   dao.updateAccount(sorted[index].copy(name = name, accountType = type, sortOrder = order))
+  }
+  val (name, type, order) = defaultAccountSpecs[3]
+  dao.insertAccount(Account(name = name, accountType = type, sortOrder = order))
+ }
+
  suspend fun saveAccount(account: Account) {
   require(account.name.isNotBlank() && account.name.length <= 60) { "Enter an account name (up to 60 characters)." }
   require(account.accountType in Categories.accountTypes)
