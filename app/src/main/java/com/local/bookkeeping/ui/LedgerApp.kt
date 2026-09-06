@@ -24,19 +24,39 @@ fun LedgerApp(vm: LedgerViewModel) {
  LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.dismissMessage() } }
  LedgerTheme(state.settings.themeMode) {
   Scaffold(
+   containerColor = MaterialTheme.colorScheme.background,
    snackbarHost = { SnackbarHost(snack) },
    bottomBar = {
-    if (route in tabs.map { it.first }) NavigationBar {
-     tabs.forEachIndexed { index, (path, title) ->
-      NavigationBarItem(selected = route == path, onClick = {
-       nav.navigate(path) { popUpTo("home") { saveState = true }; launchSingleTop = true; restoreState = true }
-      }, icon = { Icon(navIcon(index), contentDescription = title) }, label = { Text(title) })
+    if (route in tabs.map { it.first }) {
+     NavigationBar(
+      containerColor = MaterialTheme.colorScheme.surface,
+      tonalElevation = 0.dp
+     ) {
+      tabs.forEachIndexed { index, (path, title) ->
+       NavigationBarItem(
+        selected = route == path,
+        onClick = {
+         nav.navigate(path) { popUpTo("home") { saveState = true }; launchSingleTop = true; restoreState = true }
+        },
+        icon = { Icon(navIcon(index), contentDescription = title) },
+        label = { Text(title) },
+        colors = NavigationBarItemDefaults.colors(
+         selectedIconColor = MaterialTheme.colorScheme.primary,
+         selectedTextColor = MaterialTheme.colorScheme.primary,
+         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+       )
+      }
      }
     }
    }
   ) { padding ->
    Column(Modifier.fillMaxSize().padding(padding)) {
-    if (route !in tabs.map { it.first }) TextButton(onClick = { nav.popBackStack() }, enabled = !busy) { Text("‹ Back") }
+    if (route !in tabs.map { it.first }) {
+     TextButton(onClick = { nav.popBackStack() }, enabled = !busy) { Text("‹ Back") }
+    }
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     NavHost(navController = nav, startDestination = "home", modifier = Modifier.weight(1f)) {
      composable("home") { HomeScreen(state, vm, { nav.navigate(it) }) }
