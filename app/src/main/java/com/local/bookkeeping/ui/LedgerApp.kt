@@ -20,7 +20,13 @@ fun LedgerApp(vm: LedgerViewModel) {
  val nav = rememberNavController()
  val entry by nav.currentBackStackEntryAsState()
  val route = entry?.destination?.route ?: "home"
- val tabs = listOf("home" to "Home", "transactions" to "Transactions", "statistics" to "Statistics", "settings" to "Settings")
+ val tabs = listOf(
+  "home" to "Home",
+  "wallet" to "Wallet",
+  "transactions" to "Transactions",
+  "statistics" to "Statistics",
+  "settings" to "Settings"
+ )
  val snack = remember { SnackbarHostState() }
  LaunchedEffect(message) { message?.let { snack.showSnackbar(it); vm.dismissMessage() } }
  LedgerTheme(state.settings.themeMode) {
@@ -29,10 +35,7 @@ fun LedgerApp(vm: LedgerViewModel) {
    snackbarHost = { SnackbarHost(snack) },
    bottomBar = {
     if (route in tabs.map { it.first }) {
-     NavigationBar(
-      containerColor = Navy,
-      tonalElevation = 0.dp
-     ) {
+     NavigationBar(containerColor = Navy, tonalElevation = 0.dp) {
       tabs.forEachIndexed { index, (path, title) ->
        NavigationBarItem(
         selected = route == path,
@@ -40,7 +43,7 @@ fun LedgerApp(vm: LedgerViewModel) {
          nav.navigate(path) { popUpTo("home") { saveState = true }; launchSingleTop = true; restoreState = true }
         },
         icon = { Icon(navIcon(index), contentDescription = title) },
-        label = { Text(title) },
+        label = { Text(title, style = MaterialTheme.typography.labelSmall) },
         colors = NavigationBarItemDefaults.colors(
          selectedIconColor = Color.White,
          selectedTextColor = Color.White,
@@ -60,7 +63,8 @@ fun LedgerApp(vm: LedgerViewModel) {
     }
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
     NavHost(navController = nav, startDestination = "home", modifier = Modifier.weight(1f)) {
-     composable("home") { HomeScreen(state, vm, { nav.navigate(it) }) }
+     composable("home") { HomeV2Screen(state) { nav.navigate(it) } }
+     composable("wallet") { WalletScreen(state, vm) { nav.navigate(it) } }
      composable("transactions") { TransactionsScreen(state) { nav.navigate("transaction/$it") } }
      composable("statistics") { StatisticsScreen(state) }
      composable("settings") { SettingsScreen(state, vm) { nav.navigate(it) } }
@@ -87,12 +91,26 @@ fun LedgerApp(vm: LedgerViewModel) {
 }
 
 private fun navIcon(index: Int): ImageVector = ImageVector.Builder("Navigation", 24.dp, 24.dp, 24f, 24f).apply {
- path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+ path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
   when (index) {
-   0 -> { moveTo(3f, 11f); lineTo(12f, 3f); lineTo(21f, 11f); lineTo(19f, 11f); lineTo(19f, 21f); lineTo(14f, 21f); lineTo(14f, 14f); lineTo(10f, 14f); lineTo(10f, 21f); lineTo(5f, 21f); lineTo(5f, 11f); close() }
-   1 -> { for (y in listOf(5f, 11f, 17f)) { moveTo(4f,y); lineTo(20f,y); lineTo(20f,y+2); lineTo(4f,y+2); close() } }
-   2 -> { for ((x,y) in listOf(4f to 14f, 10f to 9f, 16f to 3f)) { moveTo(x,y); lineTo(x+4,y); lineTo(x+4,21f); lineTo(x,21f); close() } }
-   else -> { moveTo(4f,4f); lineTo(20f,4f); lineTo(20f,20f); lineTo(4f,20f); close(); moveTo(8f,8f); lineTo(8f,16f); lineTo(16f,16f); lineTo(16f,8f); close() }
+   0 -> {
+    moveTo(3f, 11f); lineTo(12f, 3f); lineTo(21f, 11f); lineTo(19f, 11f); lineTo(19f, 21f)
+    lineTo(14f, 21f); lineTo(14f, 14f); lineTo(10f, 14f); lineTo(10f, 21f); lineTo(5f, 21f); lineTo(5f, 11f); close()
+   }
+   1 -> {
+    moveTo(3f, 6f); lineTo(20f, 6f); lineTo(20f, 18f); lineTo(3f, 18f); close()
+    moveTo(16f, 10f); lineTo(22f, 10f); lineTo(22f, 15f); lineTo(16f, 15f); close()
+   }
+   2 -> {
+    for (y in listOf(5f, 11f, 17f)) { moveTo(4f, y); lineTo(20f, y); lineTo(20f, y + 2); lineTo(4f, y + 2); close() }
+   }
+   3 -> {
+    for ((x, y) in listOf(4f to 14f, 10f to 9f, 16f to 3f)) { moveTo(x, y); lineTo(x + 4, y); lineTo(x + 4, 21f); lineTo(x, 21f); close() }
+   }
+   else -> {
+    moveTo(4f, 4f); lineTo(20f, 4f); lineTo(20f, 20f); lineTo(4f, 20f); close()
+    moveTo(8f, 8f); lineTo(8f, 16f); lineTo(16f, 16f); lineTo(16f, 8f); close()
+   }
   }
  }
 }.build()
