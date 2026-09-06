@@ -23,22 +23,47 @@ fun AccountEditor(id: Long, state: LedgerState, vm: LedgerViewModel, done: () ->
  var name by rememberSaveable(id) { mutableStateOf(existing?.name ?: "") }
  var type by rememberSaveable(id) { mutableStateOf(existing?.accountType ?: "Checking") }
  var opening by rememberSaveable(id) { mutableStateOf(existing?.openingBalanceCny?.let(Money::input) ?: "0.00") }
+ var debtUsd by rememberSaveable(id) { mutableStateOf(existing?.creditCardDebtUsdCents?.let(Money::input) ?: "0.00") }
  var delete by remember { mutableStateOf(false) }
  var error by remember { mutableStateOf<String?>(null) }
  val busy by vm.busy.collectAsStateWithLifecycle()
+ val isCreditCard = type == "Credit Card"
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
   SectionTitle(if (id == 0L) "Create Account" else "Edit Account")
   OutlinedTextField(value = name, onValueChange = { if (it.length <= 60) name = it }, label = { Text("Account name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
   Choice("Account type", type, Categories.accountTypes) { type = it }
-  OutlinedTextField(value = opening, onValueChange = { if (it.matches(Regex("[0-9]{0,12}(\\.[0-9]{0,2})?"))) opening = it },
-   label = { Text("Opening balance CNY") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), singleLine = true)
-  Text("Opening balance is included before all income and expenses.")
+  if (isCreditCard) {
+   OutlinedTextField(
+    value = debtUsd,
+    onValueChange = { if (it.matches(Regex("[0-9]{0,12}(\\.[0-9]{0,2})?"))) debtUsd = it },
+    prefix = { Text("$") },
+    placeholder = { Text("0.00") },
+    label = { Text("Outstanding debt USD") },
+    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    modifier = Modifier.fillMaxWidth(),
+    singleLine = true
+   )
+   Text("This USD debt is deducted directly from the app's Total Balance.")
+  } else {
+   OutlinedTextField(value = opening, onValueChange = { if (it.matches(Regex("[0-9]{0,12}(\\.[0-9]{0,2})?"))) opening = it },
+    label = { Text("Opening balance CNY") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), singleLine = true)
+   Text("Opening balance is included before all income and expenses.")
+  }
   error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
   Button(onClick = {
    try {
     require(name.isNotBlank()) { "Enter an account name." }
-    val value = Money.cents(opening, true)
-    vm.saveAccount((existing ?: Account(name = name.trim(), accountType = type, sortOrder = state.accounts.size)).copy(name = name.trim(), accountType = type, openingBalanceCny = value), done)
+    val openingValue = Money.cents(opening, true)
+    val debtValue = if (isCreditCard) Money.cents(debtUsd, true) else 0L
+    vm.saveAccount(
+     (existing ?: Account(name = name.trim(), accountType = type, sortOrder = state.accounts.size)).copy(
+      name = name.trim(),
+      accountType = type,
+      openingBalanceCny = openingValue,
+      creditCardDebtUsdCents = debtValue
+     ),
+     done
+    )
    } catch (e: IllegalArgumentException) { error = e.message }
   }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Save Account") }
   existing?.let {
@@ -49,7 +74,7 @@ fun AccountEditor(id: Long, state: LedgerState, vm: LedgerViewModel, done: () ->
    TextButton(onClick = { delete = true }, enabled = !busy) { Text("Delete Empty Account", color = MaterialTheme.colorScheme.error) }
   }
  }
- if (delete) ConfirmDialog("Delete account?", "Only accounts with no transactions and zero opening balance can be deleted.", { delete = false }, { delete = false; vm.deleteAccount(id, done) })
+ if (delete) ConfirmDialog("Delete account?", "Only accounts with no transactions, zero opening balance, and zero credit-card debt can be deleted.", { delete = false }, { delete = false; vm.deleteAccount(id, done) })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
