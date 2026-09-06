@@ -22,6 +22,12 @@ object Money {
   return BigDecimal.valueOf(cnyCents, 2).multiply(rate).setScale(2, RoundingMode.HALF_UP)
  }
  fun usdCents(cnyCents: Long, rate: String) = usd(cnyCents, validRate(rate)).movePointRight(2).longValueExact()
+ fun cnyCentsFromUsd(usdCents: Long, rate: String): Long =
+  BigDecimal.valueOf(usdCents, 2).divide(validRate(rate), 2, RoundingMode.HALF_UP).movePointRight(2).longValueExact()
+ fun netUsdCents(assetCnyCents: Long, rate: String, creditDebtUsdCents: Long): Long =
+  Math.subtractExact(usdCents(assetCnyCents, rate), creditDebtUsdCents)
+ fun netCnyCents(assetCnyCents: Long, rate: String, creditDebtUsdCents: Long): Long =
+  Math.subtractExact(assetCnyCents, cnyCentsFromUsd(creditDebtUsdCents, rate))
  fun display(cents: Long, usd: Boolean = true): String =
   (if (usd) "$" else "¥") + NumberFormat.getNumberInstance(Locale.US).apply {
    minimumFractionDigits = 2; maximumFractionDigits = 2
@@ -36,5 +42,5 @@ object Categories {
  val expense = listOf("Food", "Shopping", "Transportation", "Housing", "Utilities", "Healthcare", "Entertainment", "Travel", "Education", "Family", "Other")
  val income = listOf("Salary", "Bonus", "Investment", "Refund", "Transfer", "Other")
  fun forType(type: String) = if (type == "Income") income else expense
- val accountTypes = listOf("Checking", "Savings", "Cash", "Other")
+ val accountTypes = listOf("Checking", "Savings", "Cash", "Credit Card", "Other")
 }
