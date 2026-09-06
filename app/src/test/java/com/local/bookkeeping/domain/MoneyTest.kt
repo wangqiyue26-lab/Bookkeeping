@@ -22,6 +22,10 @@ class MoneyTest {
   assertEquals(27800L, Money.usdCents(200000, "0.139"))
   assertEquals(13900L, old)
  }
+ @Test fun creditDebtIsSubtractedFromNetBalance() {
+  assertEquals(10000L, Money.netUsdCents(100000L, "0.139", 3900L))
+  assertEquals(71942L, Money.netCnyCents(100000L, "0.139", 3900L))
+ }
  @Test fun cachedRateExpiresAfterSixHours() {
   assertTrue(Money.fresh(1000, 2000))
   assertFalse(Money.fresh(1000, 1000 + 21600000))

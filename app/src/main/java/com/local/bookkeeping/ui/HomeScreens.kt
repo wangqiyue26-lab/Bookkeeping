@@ -27,13 +27,17 @@ import java.time.YearMonth
 @Composable
 fun HomeScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Unit) {
  LazyColumn(
-  contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 28.dp),
+  contentPadding = PaddingValues(bottom = 28.dp),
   verticalArrangement = Arrangement.spacedBy(20.dp)
  ) {
   item { BankingHeader() }
 
   item {
-   Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+   Row(
+    Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+   ) {
     Text("My Accounts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     TextButton(onClick = { navigate("accountEdit/0") }) { Text("+ Add") }
    }
@@ -41,13 +45,16 @@ fun HomeScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Un
 
   item {
    if (state.activeAccounts.isEmpty()) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.fillMaxWidth()) {
+    Card(
+     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+    ) {
      Text("Preparing your accounts…", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
    } else {
     LazyRow(
      horizontalArrangement = Arrangement.spacedBy(14.dp),
-     contentPadding = PaddingValues(end = 8.dp)
+     contentPadding = PaddingValues(horizontal = 20.dp)
     ) {
      itemsIndexed(state.activeAccounts, key = { _, account -> "bank-card-${account.id}" }) { index, account ->
       BankAccountCard(account, state.balance(account.id), state, index) { navigate("account/${account.id}") }
@@ -61,17 +68,26 @@ fun HomeScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Un
     onExpense = { navigate("add/Expense") },
     onIncome = { navigate("add/Income") },
     onTransactions = { navigate("transactions") },
-    onStatistics = { navigate("statistics") }
+    onStatistics = { navigate("statistics") },
+    modifier = Modifier.padding(horizontal = 20.dp)
    )
   }
 
-  item { BalanceAndRateCard(state, vm) { navigate("settings") } }
+  item {
+   BalanceAndRateCard(
+    state = state,
+    vm = vm,
+    onSettings = { navigate("settings") },
+    modifier = Modifier.padding(horizontal = 20.dp)
+   )
+  }
 
   item {
    RecentActivityCard(
     state = state,
     onSeeAll = { navigate("transactions") },
-    onTransaction = { navigate("transaction/$it") }
+    onTransaction = { navigate("transaction/$it") },
+    modifier = Modifier.padding(horizontal = 20.dp)
    )
   }
  }
@@ -79,26 +95,29 @@ fun HomeScreen(state: LedgerState, vm: LedgerViewModel, navigate: (String) -> Un
 
 @Composable
 private fun BankingHeader() {
- Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-  Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+ Row(
+  Modifier.fillMaxWidth().background(Navy).padding(horizontal = 20.dp, vertical = 24.dp),
+  verticalAlignment = Alignment.CenterVertically,
+  horizontalArrangement = Arrangement.SpaceBetween
+ ) {
+  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
    Text(
     "Hello!",
     style = MaterialTheme.typography.headlineMedium,
     fontWeight = FontWeight.Bold,
     fontStyle = FontStyle.Italic,
-    color = MaterialTheme.colorScheme.primary
+    color = Color.White
    )
-   Text("Dollar Ledger", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+   Text("Dollar Ledger", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.82f))
   }
   Box {
    Surface(
     modifier = Modifier.size(48.dp),
     shape = CircleShape,
-    color = MaterialTheme.colorScheme.surface,
-    shadowElevation = 3.dp
+    color = Color.White.copy(alpha = 0.14f)
    ) {
     Box(contentAlignment = Alignment.Center) {
-     Text("$", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+     Text("$", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
     }
    }
    Box(
@@ -149,6 +168,7 @@ private fun bankVisual(account: Account, index: Int): BankVisual {
 @Composable
 private fun BankAccountCard(account: Account, balanceCny: Long, state: LedgerState, index: Int, onClick: () -> Unit) {
  val visual = bankVisual(account, index)
+ val isCreditCard = account.accountType == "Credit Card"
  Card(
   onClick = onClick,
   modifier = Modifier.width(316.dp).height(194.dp),
@@ -200,9 +220,20 @@ private fun BankAccountCard(account: Account, balanceCny: Long, state: LedgerSta
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-     Text("CURRENT BALANCE", color = Color.White.copy(alpha = 0.72f), style = MaterialTheme.typography.labelSmall)
-     Text(state.usd(balanceCny), color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-     if (state.settings.showCnySecondaryAmount) {
+     Text(
+      if (isCreditCard) "OUTSTANDING BALANCE" else "CURRENT BALANCE",
+      color = Color.White.copy(alpha = 0.72f),
+      style = MaterialTheme.typography.labelSmall
+     )
+     Text(
+      if (isCreditCard) Money.display(account.creditCardDebtUsdCents) else state.usd(balanceCny),
+      color = Color.White,
+      style = MaterialTheme.typography.headlineMedium,
+      fontWeight = FontWeight.SemiBold
+     )
+     if (isCreditCard) {
+      Text("USD debt · deducted from Total Balance", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.bodySmall)
+     } else if (state.settings.showCnySecondaryAmount) {
       Text("≈ ${Money.display(balanceCny, false)}", color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.bodySmall)
      }
     }
@@ -215,7 +246,7 @@ private fun BankAccountCard(account: Account, balanceCny: Long, state: LedgerSta
       fontWeight = FontWeight.Medium
      )
      Text(
-      if (visual.network.startsWith("VISA")) "VISA" else account.accountType.uppercase(),
+      if (isCreditCard) "CREDIT CARD" else account.accountType.uppercase(),
       color = Color.White,
       style = MaterialTheme.typography.labelMedium,
       fontWeight = FontWeight.Bold
@@ -231,9 +262,10 @@ private fun QuickActions(
  onExpense: () -> Unit,
  onIncome: () -> Unit,
  onTransactions: () -> Unit,
- onStatistics: () -> Unit
+ onStatistics: () -> Unit,
+ modifier: Modifier = Modifier
 ) {
- Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+ Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
   QuickAction("−", "Expense", onExpense, Modifier.weight(1f))
   QuickAction("+", "Income", onIncome, Modifier.weight(1f))
   QuickAction("≡", "Activity", onTransactions, Modifier.weight(1f))
@@ -266,10 +298,10 @@ private fun QuickAction(symbol: String, label: String, onClick: () -> Unit, modi
 }
 
 @Composable
-private fun BalanceAndRateCard(state: LedgerState, vm: LedgerViewModel, onSettings: () -> Unit) {
+private fun BalanceAndRateCard(state: LedgerState, vm: LedgerViewModel, onSettings: () -> Unit, modifier: Modifier = Modifier) {
  Card(
   colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-  modifier = Modifier.fillMaxWidth(),
+  modifier = modifier.fillMaxWidth(),
   shape = RoundedCornerShape(20.dp),
   elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
  ) {
@@ -277,14 +309,22 @@ private fun BalanceAndRateCard(state: LedgerState, vm: LedgerViewModel, onSettin
    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
     Column(Modifier.weight(1f)) {
      Text("TOTAL BALANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-     Text(state.usd(state.totalCny), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+     Text(state.netUsdDisplay(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
      if (state.settings.showCnySecondaryAmount) {
-      Text("≈ ${Money.display(state.totalCny, false)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text("≈ ${state.netCnyDisplay()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+     }
+     if (state.totalCreditCardDebtUsdCents > 0L) {
+      Text(
+       "Credit-card debt −${Money.display(state.totalCreditCardDebtUsdCents)}",
+       style = MaterialTheme.typography.labelSmall,
+       color = ExpenseRed,
+       modifier = Modifier.padding(top = 4.dp)
+      )
      }
     }
     Column(horizontalAlignment = Alignment.End) {
      Text("CNY → USD", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-     Text(state.rate?.let { "$it" } ?: "Unavailable", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+     Text(state.rate ?: "Unavailable", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
      Text(state.rateDate.ifBlank { "No saved rate" }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
    }
@@ -306,10 +346,15 @@ private fun BalanceAndRateCard(state: LedgerState, vm: LedgerViewModel, onSettin
 }
 
 @Composable
-private fun RecentActivityCard(state: LedgerState, onSeeAll: () -> Unit, onTransaction: (Long) -> Unit) {
+private fun RecentActivityCard(
+ state: LedgerState,
+ onSeeAll: () -> Unit,
+ onTransaction: (Long) -> Unit,
+ modifier: Modifier = Modifier
+) {
  Card(
   colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-  modifier = Modifier.fillMaxWidth(),
+  modifier = modifier.fillMaxWidth(),
   shape = RoundedCornerShape(20.dp),
   elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
  ) {
@@ -417,12 +462,29 @@ fun AccountScreen(id: Long, state: LedgerState, navigate: (String) -> Unit) {
  var monthText by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
  if (account == null) { Text("Account unavailable", Modifier.padding(20.dp)); return }
  val entries = state.transactions.filter { it.accountId == id && it.transactionDate.startsWith(monthText) }
+ val isCreditCard = account.accountType == "Credit Card"
  LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
   item { SectionTitle(account.name) }
   item { Text(account.accountType + if (account.isArchived) " · Archived" else " · Local account") }
-  item { AmountBlock(state.balance(id), state, true) }
+  if (isCreditCard) {
+   item {
+    Card(
+     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+     modifier = Modifier.fillMaxWidth(),
+     shape = RoundedCornerShape(20.dp)
+    ) {
+     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+      Text("OUTSTANDING BALANCE", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(Money.display(account.creditCardDebtUsdCents), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.SemiBold)
+      Text("USD debt · deducted from Total Balance", color = ExpenseRed, style = MaterialTheme.typography.bodySmall)
+     }
+    }
+   }
+  } else {
+   item { AmountBlock(state.balance(id), state, true) }
+  }
   item { Text("Current Exchange Rate: " + (state.rate?.let { "1 CNY = $$it" } ?: "Unavailable")) }
-  item { OutlinedButton(onClick = { navigate("accountEdit/$id") }) { Text("Manage account") } }
+  item { OutlinedButton(onClick = { navigate("accountEdit/$id") }) { Text(if (isCreditCard) "Edit USD debt" else "Manage account") } }
   item { SectionTitle("Transactions") }
   item { MonthPicker(YearMonth.parse(monthText)) { monthText = it.toString() } }
   if (entries.isEmpty()) item { Text("No transactions this month.") }
