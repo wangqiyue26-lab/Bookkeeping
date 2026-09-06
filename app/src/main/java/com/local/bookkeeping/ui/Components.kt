@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.local.bookkeeping.data.database.LedgerTransaction
@@ -50,7 +51,7 @@ fun TransactionRow(entry: LedgerTransaction, state: LedgerState, onClick: () -> 
    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(entry.category, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
     Text(sign + Money.display(entry.amountUsd), fontWeight = FontWeight.SemiBold,
-     color = if (income) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+     color = if (income) (if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) androidx.compose.ui.graphics.Color(0xFF9CD4B1) else IncomeGreen) else MaterialTheme.colorScheme.onSurface)
    }
    Text(entry.transactionDate + " · " + (state.accounts.find { it.id == entry.accountId }?.name ?: ""), style = MaterialTheme.typography.bodySmall)
    if (state.settings.showCnySecondaryAmount) Text("≈ " + sign + Money.display(entry.amountCny, false), style = MaterialTheme.typography.bodySmall)
