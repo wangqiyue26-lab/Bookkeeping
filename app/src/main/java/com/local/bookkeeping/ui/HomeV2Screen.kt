@@ -26,7 +26,7 @@ fun HomeV2Screen(state: LedgerState, navigate: (String) -> Unit) {
   contentPadding = PaddingValues(bottom = 28.dp),
   verticalArrangement = Arrangement.spacedBy(20.dp)
  ) {
-  item { V2HomeHeader() }
+  item { V2HomeHeader(onSettings = { navigate("settings") }) }
   item {
    Row(
     Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -94,7 +94,7 @@ fun HomeV2Screen(state: LedgerState, navigate: (String) -> Unit) {
 }
 
 @Composable
-private fun V2HomeHeader() {
+private fun V2HomeHeader(onSettings: () -> Unit) {
  Row(
   Modifier.fillMaxWidth().background(Navy).padding(horizontal = 20.dp, vertical = 24.dp),
   verticalAlignment = Alignment.CenterVertically,
@@ -110,9 +110,14 @@ private fun V2HomeHeader() {
    )
    Text("Dollar Ledger", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.82f))
   }
-  Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.14f)) {
-   Box(contentAlignment = Alignment.Center) {
-    Text("$", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+   IconButton(onClick = onSettings, modifier = Modifier.size(42.dp)) {
+    Text("⚙", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+   }
+   Surface(modifier = Modifier.size(48.dp), shape = CircleShape, color = Color.White.copy(alpha = 0.14f)) {
+    Box(contentAlignment = Alignment.Center) {
+     Text("$", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+    }
    }
   }
  }
