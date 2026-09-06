@@ -3,6 +3,7 @@ package com.local.bookkeeping
 import android.app.Application
 import androidx.room.Room
 import com.local.bookkeeping.data.database.LedgerDatabase
+import com.local.bookkeeping.data.database.MIGRATION_1_2
 import com.local.bookkeeping.data.network.ExchangeRateApi
 import com.local.bookkeeping.data.repository.*
 import okhttp3.OkHttpClient
@@ -10,7 +11,11 @@ import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
 class LedgerApplication : Application() {
- val database by lazy { Room.databaseBuilder(this, LedgerDatabase::class.java, "dollar-ledger.db").build() }
+ val database by lazy {
+  Room.databaseBuilder(this, LedgerDatabase::class.java, "dollar-ledger.db")
+   .addMigrations(MIGRATION_1_2)
+   .build()
+ }
  val settings by lazy { SettingsRepository(this) }
  val ledger by lazy { LedgerRepository(database) }
  val exchange by lazy {
