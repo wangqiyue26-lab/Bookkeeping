@@ -1,0 +1,3 @@
+source_file,row_number,order_id,reason
+orders_oct.csv,6,A104,quantity must be a positive whole number
+orders_nov.csv,4,A100,duplicate order_id across inputs

@@ -1,0 +1,15 @@
+{
+  "filename": "sample_invoice.pdf",
+  "page_count": 1,
+  "fields": {
+    "invoice_number": "INV-2026-104",
+    "invoice_date": "2026-10-07",
+    "vendor": "Northwind Research Ltd",
+    "customer": "Example Operations LLC",
+    "total": "1240.50"
+  },
+  "summary": "Document INV-2026-104 from Northwind Research Ltd; extracted total 1240.50. Review extracted fields against the source PDF.",
+  "mode": "offline_rules",
+  "review_required": true,
+  "missing_fields": []
+}

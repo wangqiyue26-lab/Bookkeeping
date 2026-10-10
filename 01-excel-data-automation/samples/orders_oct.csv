@@ -1,0 +1,6 @@
+Order ID,Date,Customer,Category,Qty,Unit Price
+A100,2026-10-01,Northwind Outlet,Hardware,3,29.99
+A101,10/02/2026,Sunrise Studio,Service,2,75.00
+A102,2026-10-03,Oak & Co,Hardware,5,10.20
+A103,2026-10-04,Beacon Works,Support,1,99.00
+A104,2026-10-05,Mariner,Hardware,0,12.50

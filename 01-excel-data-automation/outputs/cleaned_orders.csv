@@ -1,0 +1,8 @@
+order_id,date,customer,category,quantity,unit_price,line_total,source_file
+A100,2026-10-01,Northwind Outlet,Hardware,3,29.99,89.97,orders_oct.csv
+A101,2026-10-02,Sunrise Studio,Service,2,75.00,150.00,orders_oct.csv
+A102,2026-10-03,Oak & Co,Hardware,5,10.20,51.00,orders_oct.csv
+A103,2026-10-04,Beacon Works,Support,1,99.00,99.00,orders_oct.csv
+B100,2026-10-06,Aspen Retail,Service,2,80.00,160.00,orders_nov.csv
+B101,2026-10-07,Beacon Works,Hardware,4,21.50,86.00,orders_nov.csv
+B102,2026-10-08,City Works,Support,1,50.00,50.00,orders_nov.csv

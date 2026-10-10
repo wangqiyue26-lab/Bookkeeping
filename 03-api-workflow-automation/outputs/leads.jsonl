@@ -1,0 +1,5 @@
+{"customer": "Aspen Ltd", "id": "CRM-101", "status": "new", "value": 120}
+{"customer": "Northwind Ltd", "id": "CRM-102", "status": "qualified", "value": 300}
+{"customer": "Example Labs", "id": "CRM-103", "status": "new", "value": 80}
+{"customer": "Mariner Co", "id": "CRM-104", "status": "won", "value": 570}
+{"customer": "Beacon LLC", "id": "CRM-105", "status": "new", "value": 200}

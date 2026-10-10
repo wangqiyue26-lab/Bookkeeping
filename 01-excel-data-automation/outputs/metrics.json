@@ -1,0 +1,7 @@
+{
+  "valid_orders": 7,
+  "rejected_rows": 2,
+  "gross_revenue": "685.97",
+  "input_files": 2,
+  "currency": "example USD (no FX conversion)"
+}
